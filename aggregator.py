@@ -3,11 +3,10 @@ import feedparser
 import csv
 import threading
 import Queue
-import pdb
 
 class Feed:
     """
-    A RSS/Atom feed.
+    An RSS/Atom feed.
 
     Functions:
         fetch        Get the lastest feed entries and return list of entry ids
@@ -26,7 +25,8 @@ class Feed:
 
         Parameters:
             url               The web address to the feed
-            info (optional)   Optional information to store about the Feed
+            info (optional)   Optional information to store about the Feed.
+                              info may be any data type.
         """
 
         # set the extra info about the feed
@@ -53,7 +53,15 @@ class Feed:
 
     def get(self):
         """
-        Get the contents of the feed from its url.
+        Get the contents of the feed from its url.  This updates the internal
+        timestamps for when the feed was last updated.  The timestamp is used
+        to minimize traffic sent by the server of the feed by telling it when
+        the last update you got was.  Not all servers support this protocol,
+        so you can't blindly expect to not have any already seen entries in
+        the result of this get.
+
+        using fetch() is reccomended as it keeps track of entries already seen
+        and will only return new ones.
         """
 
         d = feedparser.parse(self.url, modified=self._modified,  etag=self._etag)
@@ -72,14 +80,24 @@ class Feed:
     def fetch(self, update=False):
         """
         Get the latest entries from the feed. The entries and ids attributes
-        will be updated with the lastest entries.
+        will be updated with the lastest entries.  This is similar to get().
+        However, get() does not modify any internal lists regarding the feed
+        entries that have been seen.  Returns a list of ids of the new entries.
+        You may get the individual entry by indexing a Feed object with an id.
+
+        Example:
+            rssFeed = Feed('http://example.feed.com/feed.rss')
+            ids = rssFeed.fetch()
+            
+            for entryId in ids:
+                print rssFeed[entryId]
 
         Parameters:
             update (optional)    Even if an entry has already been seen, update 
                                  the entries dictionary.
 
         Returns:
-            The number of new entries handled.
+            The list of the identifiers for new entries.
         """
 
         # get the feed
@@ -343,7 +361,7 @@ class FeedList:
                          entry identified by 'id' belongs
         """
 
-        if self.threaded:
+        if self.threaded():
             self.fetchThreaded(callback=callback)
         else:
             self.fetchSerially(callback=callback)
